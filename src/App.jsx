@@ -223,7 +223,7 @@ ${context}
 ---
 User Query: ${userMsg.content}`;
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -548,7 +548,7 @@ export default function App() {
       }
       else if (key === 'gemini') {
         if (!settings.geminiKey) throw new Error('No key set');
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${settings.geminiKey}`, {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${settings.geminiKey}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             contents: [{ parts: [{ text: "Respond with the word OK." }] }],
@@ -868,9 +868,21 @@ export default function App() {
                       ) : null}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
-                      <span className="mono" style={{ fontSize: 24, fontWeight: 700, color: sym.color }}>{p.price ? fmt(p.price, sym.priceDigits) : '—'}</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: isUp ? 'var(--bull)' : 'var(--bear)' }}>{fmtPct(p.changePct)}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                        <span className="mono" style={{ fontSize: 24, fontWeight: 700, color: sym.color }}>{p.price ? fmt(p.price, sym.priceDigits) : '—'}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: isUp ? 'var(--bull)' : 'var(--bear)' }}>
+                          {p.change ? (p.change >= 0 ? '+' : '') + fmt(p.change, sym.priceDigits) : ''}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: isUp ? 'var(--bull)' : 'var(--bear)', background: isUp ? 'var(--bull)1a' : 'var(--bear)1a', padding: '1px 6px', borderRadius: 4 }}>
+                          {fmtPct(p.changePct)}
+                        </span>
+                        <span style={{ fontSize: 11, color: 'var(--t3)', fontFamily: 'monospace' }}>
+                          {p.change ? `${(p.change * sym.pipMultiplier).toFixed(sym.pipDigits)} ${sym.id.includes('MCX') ? 'pts' : 'pips'}` : ''}
+                        </span>
+                      </div>
                     </div>
 
                     {a && (
