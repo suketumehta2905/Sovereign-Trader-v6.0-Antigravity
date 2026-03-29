@@ -66,12 +66,12 @@ const ZONE_BUTTONS = [
   { key: 'supply',   label: 'Supply',      color: '#ef4444' },
   { key: 'fvg',     label: 'FVG',         color: '#3b82f6' },
   { key: 'ifvg',    label: 'IFVG',        color: '#a78bfa' },
-  { key: 'srZones', label: 'S/R',         color: '#06b6d4' },
-  { key: 'autoTL',  label: 'Auto TL',     color: '#fbbf24' },
-  { key: 'pd',      label: 'P/D',         color: '#a855f7' },
-  { key: 'liq',     label: 'LIQ',         color: '#f97316' },
-  { key: 'bos',     label: 'BOS',         color: '#e2b340' },
-  { key: 'analysis',label: 'Entry/SL/TP', color: '#e2b340' },
+  { key: 'srZones', label: 'SR Zones',      color: '#06b6d4' },
+  { key: 'autoTL',  label: 'Auto TL',       color: '#fbbf24' },
+  { key: 'pd',      label: 'P/D',           color: '#a855f7' },
+  { key: 'liq',     label: 'LIQ',           color: '#f97316' },
+  { key: 'bos',     label: 'BOS',           color: '#e2b340' },
+  { key: 'analysis',label: 'Entry/SL/TP',   color: '#e2b340' },
 ];
 
 function getChartColors(theme) {
@@ -1112,35 +1112,8 @@ export default function Chart({ sym, tf, onTFChange, candles, analysis, theme })
 
         <div style={{ width: 1, height: 16, background: 'var(--s3)', margin: '0 8px' }} />
 
-        <button
-          onClick={() => toggleZone('autoTL')}
-          title="Auto-detect Trendlines"
-          style={{
-            padding: '4px 10px', fontSize: 11, fontWeight: 700,
-            borderRadius: 5, cursor: 'pointer',
-            border: `1.5px solid ${toggles.autoTL ? 'var(--accent)' : 'var(--s3)'}`,
-            background: toggles.autoTL ? 'var(--accent-glow)' : 'var(--s2)',
-            color: toggles.autoTL ? 'var(--accent)' : 'var(--t2)',
-          }}
-        >
-          Auto TL
-        </button>
-
-        <button
-          onClick={() => toggleZone('srZones')}
-          title="Detect Support/Resistance Zones"
-          style={{
-            padding: '4px 10px', fontSize: 11, fontWeight: 700,
-            borderRadius: 5, cursor: 'pointer', marginLeft: 5,
-            border: `1.5px solid ${toggles.srZones ? 'var(--bull)' : 'var(--s3)'}`,
-            background: toggles.srZones ? 'var(--bull-bg)' : 'var(--s2)',
-            color: toggles.srZones ? 'var(--bull)' : 'var(--t2)',
-          }}
-        >
-          SR Zones
-        </button>
-
         <div style={{ flex: 1 }} />
+
 
         {/* Mitigation legend */}
         <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>

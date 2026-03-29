@@ -441,6 +441,22 @@ export default function App() {
   useEffect(() => {
     // Fetch from Supabase on init
     const loadCloudData = async () => {
+      // 1. Immediate Load from LocalStorage (UX first)
+      const localSettings = lsGet(LS_KEYS.SETTINGS, {});
+      const localSignals = lsGet(LS_KEYS.SIGNALS, []);
+      const localTrades = lsGet('st_trade_log', []);
+      const localPaperPos = lsGet('st_paper_pos', []);
+      const localPaperHist = lsGet('st_paper_hist', []);
+      const localPaperBal = lsGet('st_paper_bal', 1000000);
+
+      if (localSettings) setSettings(localSettings);
+      if (localSignals.length) setSignals(localSignals);
+      if (localTrades.length) setTrades(localTrades);
+      if (localPaperPos.length) setPaperPositions(localPaperPos);
+      if (localPaperHist.length) setPaperHistory(localPaperHist);
+      setPaperBalance(localPaperBal);
+
+      // 2. Background Sync from Supabase
       try {
         const { data: stgs } = await supabase.from('st_settings').select('*').eq('id', 1).single();
         if (stgs) {
@@ -449,14 +465,29 @@ export default function App() {
         }
 
         const { data: sigs } = await supabase.from('st_signals').select('*').order('timestamp', { ascending: false }).limit(100);
-        if (sigs && sigs.length > 0) setSignals(sigs);
+        if (sigs && sigs.length > 0) {
+          setSignals(sigs);
+          lsSet(LS_KEYS.SIGNALS, sigs);
+        }
         
         const { data: trds } = await supabase.from('st_trade_log').select('*').order('timestamp', { ascending: false });
-        if (trds && trds.length > 0) setTrades(trds);
+        if (trds && trds.length > 0) {
+          setTrades(trds);
+          lsSet('st_trade_log', trds);
+        }
+
+        // New Paper Trading cloud sync
+        const { data: pPos } = await supabase.from('st_paper_pos').select('*');
+        if (pPos && pPos.length > 0) { setPaperPositions(pPos); lsSet('st_paper_pos', pPos); }
+
+        const { data: pHist } = await supabase.from('st_paper_hist').select('*').order('closeTime', { ascending: false });
+        if (pHist && pHist.length > 0) { setPaperHistory(pHist); lsSet('st_paper_hist', pHist); }
+
+        const { data: pBal } = await supabase.from('st_paper_bal').select('*').eq('id', 1).single();
+        if (pBal && pBal.balance != null) { setPaperBalance(pBal.balance); lsSet('st_paper_bal', pBal.balance); }
+
       } catch (e) {
-        console.warn('Supabase sync disabled or error', e);
-        if (!settings.workerUrl) setSettings(lsGet(LS_KEYS.SETTINGS, {}));
-        setSignals(lsGet(LS_KEYS.SIGNALS, []));
+        console.warn('Supabase sync error', e);
       }
     };
     loadCloudData();
@@ -630,6 +661,13 @@ export default function App() {
       const newHist = [...closed, ...paperHistory];
       setPaperPositions(updated); setPaperHistory(newHist); setPaperBalance(newBal);
       lsSet('st_paper_pos', updated); lsSet('st_paper_hist', newHist); lsSet('st_paper_bal', newBal);
+      
+      // Supabase Sync
+      for (const c of closed) {
+        supabase.from('st_paper_hist').insert([c]).then();
+        supabase.from('st_paper_pos').delete().eq('id', c.id).then();
+      }
+      supabase.from('st_paper_bal').upsert({ id: 1, balance: newBal }).then();
     }
   }, [prices]);
 
@@ -663,6 +701,10 @@ export default function App() {
 
     const upd = [pos, ...paperPositions];
     setPaperPositions(upd); lsSet('st_paper_pos', upd);
+    
+    // Supabase Sync
+    supabase.from('st_paper_pos').insert([pos]).then();
+
     setPaperForm(f => ({ ...f, entry: '', sl: '', tp1: '' }));
   };
 
@@ -678,12 +720,22 @@ export default function App() {
     const newBal = paperBalance + Math.round(pnl);
     setPaperPositions(updPos); setPaperHistory(newHist); setPaperBalance(newBal);
     lsSet('st_paper_pos', updPos); lsSet('st_paper_hist', newHist); lsSet('st_paper_bal', newBal);
+
+    // Supabase Sync
+    supabase.from('st_paper_pos').delete().eq('id', pos.id).then();
+    supabase.from('st_paper_hist').insert([closed]).then();
+    supabase.from('st_paper_bal').upsert({ id: 1, balance: newBal }).then();
   };
 
   const resetPaperAccount = () => {
     if (!window.confirm('Reset paper trading account to ₹10,00,000?')) return;
     setPaperPositions([]); setPaperHistory([]); setPaperBalance(STARTING_CAPITAL);
     lsSet('st_paper_pos', []); lsSet('st_paper_hist', []); lsSet('st_paper_bal', STARTING_CAPITAL);
+
+    // Supabase Sync
+    supabase.from('st_paper_pos').delete().neq('id', 0).then();
+    supabase.from('st_paper_hist').delete().neq('id', 0).then();
+    supabase.from('st_paper_bal').upsert({ id: 1, balance: STARTING_CAPITAL }).then();
   };
 
   useEffect(() => {

@@ -10,6 +10,7 @@
  */
 
 import { EQH_TOLERANCE, EQH_MIN_TOUCHES, MACRO_LOOKBACK, SWING_LOOKBACK_MIN, SWING_LOOKBACK_MACRO } from './engineConfig';
+import { AdvancedSRDetector } from './advancedSR';
 
 const LIQ_LOOKBACK = MACRO_LOOKBACK; 
 const SWING_LOOKBACK = SWING_LOOKBACK_MIN; 
@@ -66,18 +67,18 @@ export function detectLiquidity(candles) {
   }
 
   // ── Find Macro Pivot Highs/Lows (Major Support/Resistance) ──────────
-  const macroHighs = [];
-  const macroLows = [];
-  for (let i = SWING_LOOKBACK_MACRO; i < slice.length - SWING_LOOKBACK_MACRO; i++) {
-    const c = slice[i];
-    let isHigh = true, isLow = true;
-    for (let j = 1; j <= SWING_LOOKBACK_MACRO; j++) {
-      if (slice[i - j].high >= c.high || slice[i + j].high >= c.high) isHigh = false;
-      if (slice[i - j].low <= c.low || slice[i + j].low <= c.low) isLow = false;
-    }
-    if (isHigh) macroHighs.push({ price: c.high, time: c.time, idx: i, type: 'macro' });
-    if (isLow)  macroLows.push({ price: c.low, time: c.time, idx: i, type: 'macro' });
-  }
+  // Now using AdvancedSRDetector (Pivot Clustering)
+  const detector = new AdvancedSRDetector(15, 15, 0.005);
+  const macroZones = detector.analyze(slice);
+  
+  const macroHighs = macroZones
+    .filter(z => z.initialType === 'RES')
+    .map(z => ({ price: z.price, time: z.startTime, pieces: z.touches, type: 'macro' }));
+    
+  const macroLows = macroZones
+    .filter(z => z.initialType === 'SUP')
+    .map(z => ({ price: z.price, time: z.startTime, pieces: z.touches, type: 'macro' }));
+
 
   // ── EQH/EQL Clustering (Pine Script: Pinnacle Structure Cipher) ────────
   // Group swing points within ATR * EQH_TOLERANCE into liquidity pools
