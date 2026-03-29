@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { detectBOSCHOCH } from '../engine/bosDetector';
 import { detectTrendlines } from '../engine/trendlineDetector';
 import { detectLiquidity } from '../engine/liquidityDetector';
+import { AdvancedSRDetector } from '../engine/advancedSR';
 import { lsGet, lsSet } from '../utils/localStorage';
 
 const LW_CDN = 'https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js';
@@ -504,27 +505,24 @@ function buildZones(analysis, candles, toggles) {
       });
   }
 
-  // ── Macro S/R Zones (Engine Macro Pivot Clusters) ──────────────────────────
+  // ── Macro S/R Zones (Pivot-based Clustering — LuxAlgo Style) ──────────
   if (toggles.srZones) {
-    (analysis.macroHighs || []).forEach((h) => {
+    const detector = new AdvancedSRDetector(15, 15, 0.005);
+    const srZones  = detector.analyze(candles.slice(-300)); // last 300 bars
+    
+    srZones.forEach((z) => {
+      // Zone height based on ATR (from Line 465)
+      const hScale = Math.max(atr * 0.15, z.price * 0.001); 
+      const isRes  = z.initialType === 'RES';
+      const color  = isRes ? '#f43f5e' : '#10b981'; // vibrant rose/emerald
+      
       zones.push({
-        startTime:  h.time,
+        startTime:  z.startTime,
         endTime:    null,
-        top:        h.price + (atr * 0.1),
-        bottom:     h.price - (atr * 0.1),
-        color:      '#fb923c', // orange res
-        label:      'Macro RES',
-        mitigation: 'tested',
-      });
-    });
-    (analysis.macroLows || []).forEach((l) => {
-      zones.push({
-        startTime:  l.time,
-        endTime:    null,
-        top:        l.price + (atr * 0.1),
-        bottom:     l.price - (atr * 0.1),
-        color:      '#06b6d4', // teal sup
-        label:      'Macro SUP',
+        top:        z.price + hScale,
+        bottom:     z.price - hScale,
+        color:      color,
+        label:      `${isRes ? 'Res' : 'Sup'} (T:${z.touches}${z.isFlip ? ', Flip' : ''})`,
         mitigation: 'tested',
       });
     });
