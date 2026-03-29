@@ -682,7 +682,13 @@ export default function App() {
 
   const takeTrade = (sig) => {
     const pos = { id: Date.now(), symbol: sig.symbol || selectedSym.id, bias: sig.bias, entry: +sig.entry, sl: +sig.sl, tp1: +sig.tp1, lots: 1, openTime: Date.now() };
-    setPaperPositions(p => [...p, pos]);
+    const upd = [pos, ...paperPositions];
+    setPaperPositions(upd);
+    lsSet('st_paper_pos', upd);
+    
+    // Supabase Sync
+    supabase.from('st_paper_pos').insert([pos]).then();
+
     setTab('paper');
     const msg = `🚨 *Sovereign Trader Alert*\n\n${pos.symbol} ${pos.bias} at ${pos.entry}\nSL: ${pos.sl}\nTP1: ${pos.tp1}`;
     sendTelegramMessage(msg);
